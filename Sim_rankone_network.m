@@ -13,6 +13,11 @@ phi = @(x) tanh(x);	% activation function
 
 dt = 0.02;	% time step
 T = 30;	% simulation time
+ntrials = 1;
+
+ntrials = 100;
+dt = 0.1;
+T = 20;
 rng(0);
 
 %% Theoretical stationary solution
@@ -34,7 +39,7 @@ for i = 1:ng^2
     vm(i) = MU(gm(i),gd(i))-gm(i);
     vd(i) = D0(gm(i),gd(i))-gd(i);
 end
-figure;
+figure(1);
 quiver(gm,gd,vm,vd);
 axis tight;
 xlabel('\mu');	ylabel('\Delta_0');
@@ -51,7 +56,7 @@ for i = 1:2
     end
 end
 
-hold on;
+figure(1);  hold on;
 for i = 1:2
     plot(mu(i,:),d0(i,:),'r');
     plot(mu(i,end),d0(i,end),'ro');
@@ -74,6 +79,9 @@ figure;
 plot(mn(:,1),mn(:,2),'.');
 xlabel('m');    ylabel('n');
 
+
+hs = zeros(N,ntrials);
+for j = 1:ntrials
 % random connection
 chi = g*randn(N,N)/N^0.5;
 J = chi + P;	% connectivity matrix
@@ -81,6 +89,32 @@ h0 = 0 + 1.0*randn(N,1);	% initial state
 
 %% Simulation
 [h,t] = sim_net( J, phi, h0, T, dt );
+
+hs(:,j) = h(:,end);
+end
+
+%% Calculate sample first/second moments
+mu_t = mean(hs,1);
+sgn = sign(mu_t);
+hs = bsxfun(@times,hs,sgn);
+mu_i = mean(hs,2);
+d0_i = var(hs,[],2);
+mu_e = mean(mu_i);
+d0_e = var(hs(:));
+kappa = mean(mn(:,2).*phi(mu_i));
+
+figure(1);
+plot(mu_e*[-1,1],d0_e*[1,1],'go');
+
+c_mu = corrcoef(mn(:,1),mu_i);
+c_mu = c_mu(2);
+disp(c_mu);
+figure; hold on;
+plot(mu(2,end)/Mm*mn(:,1),mu_i,'b.');
+axis tight;
+xl = get(gca,'XLim');
+plot(xl,xl,'r');
+xlabel('m_i\kappa');	ylabel('\mu _i');
 
 %% Plot
 % Activity
@@ -90,11 +124,4 @@ plot(t,h(nshow,:));
 xlim(t([1,end]));
 xlabel('time'); ylabel('h');
 title(num2str(numel(nshow),'Activities of %g units'));
-
-figure;
-plot(mn(:,1),h(:,end),'.');
-xlabel('m');    ylabel('h');
-
-
-
 
